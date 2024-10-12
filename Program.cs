@@ -1,6 +1,7 @@
 ﻿using BuildF394;
 using NPOI.SS.UserModel;    // Interfaz común para manipular hojas de cálculo
 using NPOI.XSSF.UserModel;
+using System.Globalization;
 
 /// <summary>
 ///
@@ -41,8 +42,8 @@ internal class Program
             // Procesar filas y almacenar en memoria
             List<string[]> dataEnMemoria = ProcesarFilas(hoja, registros);
 
-            Console.WriteLine("Escribir en archivo de texto");
             // Escribir registros directamente en archivo de texto
+            Console.WriteLine("Escribir en archivo de texto");
             EscribirEnArchivoPlano(dataEnMemoria, rutaEjecutable, hoja);
 
             TimeSpan ts = DateTime.Now - start;
@@ -157,15 +158,24 @@ internal class Program
     /// </summary>
     /// <param name="dataEnMemoria"></param>
     /// <param name="rutaEjecutable"></param>
-    /// <param name="xlHoja1"></param>
-    private static void EscribirEnArchivoPlano(List<string[]> dataEnMemoria, string rutaEjecutable, ISheet xlHoja1)
+    /// <param name="hoja"></param>
+    private static void EscribirEnArchivoPlano(List<string[]> dataEnMemoria, string rutaEjecutable, ISheet hoja)
     {
+        string fechaOriginal = hoja.GetRow(0).GetCell(5).ToString();
+
+        // Extraer el mes y el año manualmente
+        string mes = fechaOriginal.Substring(3, 3).ToUpper();  // Obtiene "DIC"
+        string año = fechaOriginal.Substring(fechaOriginal.Length - 4);  // Obtiene "2014"
+
+        // Unir mes y año en el formato deseado
+        string fecha = $"{mes}-{año}";
+
         // Construir nombre del archivo de salida
-        string nombre = xlHoja1.GetRow(0).GetCell(5).ToString().Substring(6, 4) +
-                        xlHoja1.GetRow(0).GetCell(5).ToString().Substring(3, 2) +
-                        "fto394.txt";
+        string nombre = $"{fecha}-fto394.txt";
+
         string rutaGuardado = Path.Combine(rutaEjecutable, nombre);
 
+        // Borra el archivo si existe
         if (File.Exists(rutaGuardado)) File.Delete(rutaGuardado);
 
         Console.WriteLine($"Archivo creado {rutaGuardado}");
@@ -174,7 +184,8 @@ internal class Program
         {
             foreach (var fila in dataEnMemoria)
             {
-                writer.WriteLine(string.Join("", fila));  // Escribir cada fila concatenando todos los valores
+                // Escribir cada fila concatenando todos los valores
+                writer.WriteLine(string.Join("", fila));
             }
         }
     }

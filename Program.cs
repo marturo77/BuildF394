@@ -1,5 +1,6 @@
 ﻿using NPOI.XSSF.UserModel;  // Para trabajar con archivos .xlsx
-using NPOI.SS.UserModel;    // Interfaz común para manipular hojas de cálculo
+using NPOI.SS.UserModel;
+using System.Globalization;    // Interfaz común para manipular hojas de cálculo
 
 namespace BuildF394
 {
@@ -44,31 +45,27 @@ namespace BuildF394
 
                 string nceros_sec = new string('0', 8 - (secuencia + 1).ToString().Length);
                 int Total = j - secuencia;
-                string total_reg = nceros_sec + Total;
 
-                string fecha = hoja.GetRow(0).GetCell(5).ToString();
-                string dia = fecha.Substring(0, 2);
-                string mes = fecha.Substring(3, 3);
-                string año = fecha.Substring(fecha.Length - 4);
+                string date = hoja.GetRow(0).GetCell(5).ToString();
+                string day = date.Substring(0, 2);
+                string month = date.Substring(3, 3).ToUpper();
+                string year = date.Substring(date.Length - 4);
 
                 Console.WriteLine("Escribiendo encabezados");
-                string tipo1 = $"0000001114000025{dia}{mes}{total_reg}SVIDCOLMENA0907";
+                string tipo1 = $"0000001114000025{day}{month}{year}{datos.Count().ToString().PadLeft(8, '0')}SVIDCOLMENA0907";
                 string tipo3 = "00000023000000000000000000000000";
                 string tipo4 = "00000034000000000000000000000002";
-                string tipo6 = $"{total_reg}6";
+                string tipo6 = $"{datos.Count().PadZerosLeft()}6";
 
-                // Encabezado
-                string[] header = new string[7];
-                header[0] = tipo1;
-                header[1] = tipo3;
-                header[2] = tipo4;
-                datos.Insert(0, header);
+                datos.Insert(0, new string[] { tipo1 });
+                datos.Insert(1, new string[] { tipo3 });
+                datos.Insert(2, new string[] { tipo4 });
 
-                // Registro de cierre
-                datos.Append(new string[] { tipo6 });
+                // Registro de cierre al final
+                datos.Add(new string[] { tipo6 });
 
                 Console.WriteLine("EscribirEnArchivoPlano");
-                EscribirEnArchivoPlano(datos, rutaEjecutable, mes.ToUpper(), año);
+                EscribirEnArchivoPlano(datos, month, year, rutaEjecutable);
 
                 Console.WriteLine("Proceso completado.");
             }

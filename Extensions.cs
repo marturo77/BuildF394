@@ -8,6 +8,17 @@ namespace BuildF394
     public static class Extensions
     {
         /// <summary>
+        ///
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="pad"></param>
+        /// <returns></returns>
+        public static string PadZerosLeft(this int value, int pad = 8)
+        {
+            return value.ToString().PadLeft(pad, '0');
+        }
+
+        /// <summary>
         /// Funciones para identificar tipo de dato
         /// </summary>
         /// <param name="columna"></param>

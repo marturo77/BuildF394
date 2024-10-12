@@ -3,8 +3,14 @@ using NPOI.SS.UserModel;    // Interfaz común para manipular hojas de cálculo
 
 namespace BuildF394
 {
+    /// <summary>
+    ///
+    /// </summary>
     internal class Program
     {
+        /// <summary>
+        ///
+        /// </summary>
         private static void Main()
         {
             // Obtener la ruta del directorio del ejecutable
@@ -26,17 +32,13 @@ namespace BuildF394
                 XSSFWorkbook workbook = new XSSFWorkbook(file);  // Para archivos .xlsx
 
                 // Obtener las hojas de cálculo
-                ISheet xlHoja1 = workbook.GetSheetAt(0);
-                ISheet xlHoja2 = workbook.GetSheetAt(1);
-                ISheet xlHoja3 = workbook.GetSheetAt(2);
-
-                string ruta = xlHoja1.GetRow(1).GetCell(5).ToString();
+                ISheet hoja = workbook.GetSheetAt(0);
 
                 Console.WriteLine("ObtenerRegistros");
-                int j = ObtenerRegistros(xlHoja1);
+                int j = ObtenerRegistros(hoja);
 
-                Console.WriteLine("ObtenerRegistros");
-                List<string[]> datos = ProcesarFilas(xlHoja1, j - 1);
+                Console.WriteLine("ProcesarFilas");
+                List<string[]> datos = ProcesarFilas(hoja, j - 1);
 
                 int secuencia = j - 1;
 
@@ -44,38 +46,29 @@ namespace BuildF394
                 int Total = j - secuencia;
                 string total_reg = nceros_sec + Total;
 
-                string fecha = xlHoja1.GetRow(0).GetCell(5).ToString();
+                string fecha = hoja.GetRow(0).GetCell(5).ToString();
+                string dia = fecha.Substring(0, 2);
+                string mes = fecha.Substring(3, 3);
+                string año = fecha.Substring(fecha.Length - 4);
 
-                string reg_tipo_1 = "0000001114000025" + fecha.Substring(0, 2) + fecha.Substring(3, 2) + total_reg + "SVIDCOLMENA0907";
-                string reg_tipo_3 = "00000023000000000000000000000000";
-                string reg_tipo_4 = "00000034000000000000000000000002";
-                string reg_tipo_6 = total_reg + "6";
+                Console.WriteLine("Escribiendo encabezados");
+                string tipo1 = $"0000001114000025{dia}{mes}{total_reg}SVIDCOLMENA0907";
+                string tipo3 = "00000023000000000000000000000000";
+                string tipo4 = "00000034000000000000000000000002";
+                string tipo6 = $"{total_reg}6";
 
-                IRow row3 = xlHoja3.CreateRow(0);
-                row3.CreateCell(0).SetCellValue(reg_tipo_1);
-                xlHoja3.CreateRow(1).CreateCell(0).SetCellValue(reg_tipo_3);
-                xlHoja3.CreateRow(2).CreateCell(0).SetCellValue(reg_tipo_4);
+                // Encabezado
+                string[] header = new string[7];
+                header[0] = tipo1;
+                header[1] = tipo3;
+                header[2] = tipo4;
+                datos.Insert(0, header);
 
-                for (int m = 4; m <= secuencia; m++)
-                {
-                    IRow row3M = xlHoja3.CreateRow(m);
-                    string value =
-                        xlHoja2.GetRow(m - 2).GetCell(0).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(1).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(2).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(3).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(4).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(5).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(6).ToString() +
-                        xlHoja2.GetRow(m - 2).GetCell(7).ToString();
-
-                    row3M.CreateCell(0).SetCellValue(value);
-                }
-
-                xlHoja3.CreateRow(secuencia + 1).CreateCell(0).SetCellValue(reg_tipo_6);
+                // Registro de cierre
+                datos.Append(new string[] { tipo6 });
 
                 Console.WriteLine("EscribirEnArchivoPlano");
-                EscribirEnArchivoPlano(datos, rutaEjecutable, xlHoja1);
+                EscribirEnArchivoPlano(datos, rutaEjecutable, mes.ToUpper(), año);
 
                 Console.WriteLine("Proceso completado.");
             }
@@ -84,17 +77,11 @@ namespace BuildF394
         /// <summary>
         /// Función para escribir registros directamente en archivo de texto
         /// </summary>
-        /// <param name="dataEnMemoria"></param>
+        /// <param name="datos"></param>
         /// <param name="rutaEjecutable"></param>
         /// <param name="hoja"></param>
-        private static void EscribirEnArchivoPlano(List<string[]> dataEnMemoria, string rutaEjecutable, ISheet hoja)
+        private static void EscribirEnArchivoPlano(List<string[]> datos, string mes, string año, string rutaEjecutable)
         {
-            string fechaOriginal = hoja.GetRow(0).GetCell(5).ToString();
-
-            // Extraer el mes y el año manualmente
-            string mes = fechaOriginal.Substring(3, 3).ToUpper();  // Obtiene "DIC"
-            string año = fechaOriginal.Substring(fechaOriginal.Length - 4);  // Obtiene "2014"
-
             // Unir mes y año en el formato deseado
             string fecha = $"{mes}-{año}";
 
@@ -110,7 +97,7 @@ namespace BuildF394
 
             using (StreamWriter writer = new StreamWriter(rutaGuardado))
             {
-                foreach (var fila in dataEnMemoria)
+                foreach (var fila in datos)
                 {
                     // Escribir cada fila concatenando todos los valores
                     writer.WriteLine(string.Join("", fila));
@@ -118,6 +105,14 @@ namespace BuildF394
             }
         }
 
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="secuencia"></param>
+        /// <param name="j"></param>
+        /// <param name="hojaRow"></param>
+        /// <param name="xlsHoja"></param>
+        /// <returns></returns>
         private static string[] CrearFilaEnMemoria(int secuencia, int j, int hojaRow, ISheet xlsHoja)
         {
             string nceros1 = new string('0', 8 - secuencia.ToString().Length);
@@ -160,22 +155,28 @@ namespace BuildF394
             return "";
         }
 
-        private static List<string[]> ProcesarFilas(ISheet xlHoja1, int registros)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="hoja"></param>
+        /// <param name="registros"></param>
+        /// <returns></returns>
+        private static List<string[]> ProcesarFilas(ISheet hoja, int registros)
         {
-            List<string[]> dataEnMemoria = new List<string[]>();  // Estructura para almacenar los datos en memoria
+            List<string[]> dataEnMemoria = new List<string[]>();
             int k = 0;
             int secuencia = 0;
 
-            for (int j = 1; j <= 84; j++)
+            for (int col = 1; col <= 84; col++)
             {
-                for (int hoja1Row = 1; hoja1Row <= registros; hoja1Row++)
+                for (int fila = 1; fila <= registros; fila++)
                 {
-                    if (xlHoja1.CeldaNoVacia(hoja1Row, j))
+                    if (hoja.CeldaNoVacia(fila, col))
                     {
                         k++;
                         secuencia = 3 + k;
-                        string[] filaDatos = CrearFilaEnMemoria(secuencia, j, hoja1Row, xlHoja1);  // Almacenar en memoria
-                        dataEnMemoria.Add(filaDatos);  // Añadir a la lista
+                        string[] filaDatos = CrearFilaEnMemoria(secuencia, col, fila, hoja);  // Almacenar en memoria
+                        dataEnMemoria.Add(filaDatos);
                     }
                 }
             }

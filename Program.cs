@@ -1,7 +1,5 @@
 ﻿using NPOI.SS.UserModel;    // Interfaz común para manipular hojas de cálculo
 using NPOI.XSSF.UserModel;  // Para trabajar con archivos .xlsx
-using System;
-using System.IO;
 
 internal class Program
 {
@@ -19,40 +17,27 @@ internal class Program
         }
 
         // Abrir y procesar el archivo Excel
-        using (FileStream file = new FileStream(rutaArchivo, FileMode.Open, FileAccess.Read))
+        using (FileStream stream = new FileStream(rutaArchivo, FileMode.Open, FileAccess.Read))
         {
-            XSSFWorkbook workbook = new XSSFWorkbook(file);  // Para archivos .xlsx
+            Console.WriteLine($"Abriendo {rutaArchivo}");
+            XSSFWorkbook workbook = new XSSFWorkbook(stream);  // Para archivos .xlsx
             ISheet xlHoja1 = workbook.GetSheetAt(0);
-            ISheet xlHoja2 = workbook.GetSheetAt(1);
-            ISheet xlHoja3 = workbook.GetSheetAt(2);
-
-            // Limpiar hoja 2 antes de iniciar
-            ClearSheet(xlHoja2);
 
             // Obtener ruta de celda
             string ruta = xlHoja1.GetRow(1).GetCell(5).ToString();
+
+            Console.WriteLine("ObtenerRegistros");
             int registros = ObtenerRegistros(xlHoja1);
-            ProcesarFilas(xlHoja1, xlHoja2, registros);
 
-            // Crear registros finales en la hoja 3
-            CrearRegistrosFinales(xlHoja2, xlHoja3, registros);
+            Console.WriteLine("ProcesarFilas");
+            // Procesar filas y almacenar en memoria
+            List<string[]> dataEnMemoria = ProcesarFilas(xlHoja1, registros);
 
-            // Guardar el archivo procesado
-            GuardarArchivo(workbook, rutaEjecutable, xlHoja1);
+            Console.WriteLine("Escribir en archivo de texto");
+            // Escribir registros directamente en archivo de texto
+            EscribirEnArchivoPlano(dataEnMemoria, rutaEjecutable, xlHoja1);
+
             Console.WriteLine("Proceso completado.");
-        }
-    }
-
-    // Función para limpiar una hoja
-    private static void ClearSheet(ISheet sheet)
-    {
-        for (int i = sheet.LastRowNum; i >= 0; i--)
-        {
-            IRow row = sheet.GetRow(i);
-            if (row != null)
-            {
-                sheet.RemoveRow(row);
-            }
         }
     }
 
@@ -68,9 +53,10 @@ internal class Program
         return j - 1;
     }
 
-    // Función para procesar las filas de la hoja 1 y escribir en la hoja 2
-    private static void ProcesarFilas(ISheet xlHoja1, ISheet xlHoja2, int registros)
+    // Función para procesar las filas de la hoja 1 y almacenar en memoria
+    private static List<string[]> ProcesarFilas(ISheet xlHoja1, int registros)
     {
+        List<string[]> dataEnMemoria = new List<string[]>();  // Estructura para almacenar los datos en memoria
         int k = 0;
         int secuencia = 0;
 
@@ -82,11 +68,13 @@ internal class Program
                 {
                     k++;
                     secuencia = 3 + k;
-                    IRow row2 = CrearFilaHoja2(xlHoja2, secuencia, j, hoja1Row);
-                    ProcesarCeldas(xlHoja1, row2, hoja1Row, j);
+                    string[] filaDatos = CrearFilaEnMemoria(secuencia, j, hoja1Row, xlHoja1);  // Almacenar en memoria
+                    dataEnMemoria.Add(filaDatos);  // Añadir a la lista
                 }
             }
         }
+
+        return dataEnMemoria;
     }
 
     // Función para verificar si la celda no está vacía
@@ -96,36 +84,33 @@ internal class Program
                sheet.GetRow(5 + fila).GetCell(columna - 1).ToString() != "";
     }
 
-    // Función para crear una nueva fila en la hoja 2
-    private static IRow CrearFilaHoja2(ISheet sheet, int secuencia, int j, int hoja1Row)
+    // Función para crear una nueva fila en memoria
+    private static string[] CrearFilaEnMemoria(int secuencia, int j, int hoja1Row, ISheet xlHoja1)
     {
-        int lon_secuencia = secuencia.ToString().Length;
-        string nceros1 = new string('0', 8 - lon_secuencia);
-
-        IRow row = sheet.CreateRow(1 + hoja1Row);
-        row.CreateCell(0).SetCellValue(nceros1 + secuencia);
-        row.CreateCell(1).SetCellValue(5);
-        row.CreateCell(2).SetCellValue(394);
-
+        string nceros1 = new string('0', 8 - secuencia.ToString().Length);
         string nceros4 = j < 10 ? "0" : "";
-        row.CreateCell(3).SetCellValue(nceros4 + j);
-        row.CreateCell(4).SetCellValue("01");
+        string nceros6 = new string('0', 6 - hoja1Row.ToString().Length);
 
-        int lon_reg = hoja1Row.ToString().Length;
-        string nceros6 = new string('0', 6 - lon_reg);
-        row.CreateCell(5).SetCellValue(nceros6 + hoja1Row);
-        row.CreateCell(6).SetCellValue("+");
+        // Almacenar todos los datos en un array de strings
+        string[] filaDatos = new string[8];
+        filaDatos[0] = nceros1 + secuencia;
+        filaDatos[1] = "5";
+        filaDatos[2] = "394";
+        filaDatos[3] = nceros4 + j;
+        filaDatos[4] = "01";
+        filaDatos[5] = nceros6 + hoja1Row;
+        filaDatos[6] = "+";
+        filaDatos[7] = ObtenerValorCelda(xlHoja1, hoja1Row, j);
 
-        return row;
+        return filaDatos;
     }
 
-    // Función para procesar celdas y llenar la hoja 2
-    private static void ProcesarCeldas(ISheet xlHoja1, IRow row, int hoja1Row, int j)
+    // Función para obtener el valor procesado de una celda
+    private static string ObtenerValorCelda(ISheet xlHoja1, int hoja1Row, int j)
     {
         if (EsTexto(j))
         {
-            string valorCelda = xlHoja1.GetRow(5 + hoja1Row).GetCell(j - 1).ToString();
-            row.CreateCell(7).SetCellValue(valorCelda.PadRight(50));
+            return xlHoja1.GetRow(5 + hoja1Row).GetCell(j - 1).ToString().PadRight(50);
         }
         else if (EsFecha(j))
         {
@@ -133,14 +118,14 @@ internal class Program
             string diaStr = fecha.Day < 10 ? "0" + fecha.Day : fecha.Day.ToString();
             string mesStr = fecha.Month < 10 ? "0" + fecha.Month : fecha.Month.ToString();
             string añoStr = fecha.Year.ToString();
-            row.CreateCell(7).SetCellValue($"{diaStr}{mesStr}{añoStr}");
+            return $"{diaStr}{mesStr}{añoStr}";
         }
         else if (EsNumero(j))
         {
             double valor = xlHoja1.GetRow(5 + hoja1Row).GetCell(j - 1).NumericCellValue;
-            string campo_num = Math.Round(valor, 2).ToString("0.00").Replace(",", ".");
-            row.CreateCell(7).SetCellValue(campo_num);
+            return Math.Round(valor, 2).ToString("0.00").Replace(",", ".");
         }
+        return "";
     }
 
     // Funciones para identificar tipo de dato
@@ -150,30 +135,25 @@ internal class Program
 
     private static bool EsNumero(int columna) => new[] { 4, 6, 7, 30, 32, 37, 79, 80, 81, 82 }.Contains(columna);
 
-    // Función para crear registros finales en la hoja 3
-    private static void CrearRegistrosFinales(ISheet xlHoja2, ISheet xlHoja3, int secuencia)
+    // Función para escribir registros directamente en archivo de texto
+    private static void EscribirEnArchivoPlano(List<string[]> dataEnMemoria, string rutaEjecutable, ISheet xlHoja1)
     {
-        for (int row = 4; row <= secuencia; row++)
-        {
-            IRow row3M = xlHoja3.CreateRow(row);
-            for (int col = 0; col <= 7; col++)
-            {
-                row3M.CreateCell(0).SetCellValue(
-                    xlHoja2.GetRow(row - 2).GetCell(col).ToString());
-            }
-        }
-    }
-
-    // Función para guardar el archivo
-    private static void GuardarArchivo(XSSFWorkbook workbook, string rutaEjecutable, ISheet xlHoja1)
-    {
+        // Construir nombre del archivo de salida
         string nombre = xlHoja1.GetRow(0).GetCell(5).ToString().Substring(6, 4) +
                         xlHoja1.GetRow(0).GetCell(5).ToString().Substring(3, 2) +
                         "fto394.txt";
         string rutaGuardado = Path.Combine(rutaEjecutable, nombre);
-        using (FileStream output = new FileStream(rutaGuardado, FileMode.Create, FileAccess.Write))
+
+        if (File.Exists(rutaGuardado)) File.Delete(rutaGuardado);
+
+        Console.WriteLine($"Archivo creado {rutaGuardado}");
+
+        using (StreamWriter writer = new StreamWriter(rutaGuardado))
         {
-            workbook.Write(output);
+            foreach (var fila in dataEnMemoria)
+            {
+                writer.WriteLine(string.Join("", fila));  // Escribir cada fila concatenando todos los valores
+            }
         }
     }
 }

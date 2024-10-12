@@ -148,4 +148,32 @@ internal class Program
 
     private static bool EsFecha(int columna) => new[] { 9, 11, 20, 46, 54, 62, 83 }.Contains(columna);
 
-    private static bool EsNumero(int columna)
+    private static bool EsNumero(int columna) => new[] { 4, 6, 7, 30, 32, 37, 79, 80, 81, 82 }.Contains(columna);
+
+    // Función para crear registros finales en la hoja 3
+    private static void CrearRegistrosFinales(ISheet xlHoja2, ISheet xlHoja3, int secuencia)
+    {
+        for (int row = 4; row <= secuencia; row++)
+        {
+            IRow row3M = xlHoja3.CreateRow(row);
+            for (int col = 0; col <= 7; col++)
+            {
+                row3M.CreateCell(0).SetCellValue(
+                    xlHoja2.GetRow(row - 2).GetCell(col).ToString());
+            }
+        }
+    }
+
+    // Función para guardar el archivo
+    private static void GuardarArchivo(XSSFWorkbook workbook, string rutaEjecutable, ISheet xlHoja1)
+    {
+        string nombre = xlHoja1.GetRow(0).GetCell(5).ToString().Substring(6, 4) +
+                        xlHoja1.GetRow(0).GetCell(5).ToString().Substring(3, 2) +
+                        "fto394.txt";
+        string rutaGuardado = Path.Combine(rutaEjecutable, nombre);
+        using (FileStream output = new FileStream(rutaGuardado, FileMode.Create, FileAccess.Write))
+        {
+            workbook.Write(output);
+        }
+    }
+}

@@ -21,27 +21,27 @@ namespace BuildF394
             /// <summary>
             ///
             /// </summary>
-            public string entityType = "14";
+            public string EntityType = "14";
 
             /// <summary>
             ///
             /// </summary>
-            public string entityCode = "000025";
+            public string EntityCode = "000025";
 
             /// <summary>
             ///
             /// </summary>
-            public string keyWord = "SVIDCOLMENA";
+            public string KeyWord = "SVIDCOLMENA";
 
             /// <summary>
             ///
             /// </summary>
-            public string area = "09";
+            public string Area = "09";
 
             /// <summary>
             ///
             /// </summary>
-            public string reportType = "07";
+            public string ReportType = "07";
         }
 
         /// <summary>
@@ -49,74 +49,85 @@ namespace BuildF394
         /// </summary>
         private static void Main()
         {
-            // Obtener la ruta del directorio del ejecutable
-            string rutaEjecutable = AppDomain.CurrentDomain.BaseDirectory;
-
-            // Construir la ruta completa al archivo plantilla.xlsx
-            string rutaArchivo = Path.Combine(rutaEjecutable, "plantilla.xls");
-
-            // Verificar si el archivo existe
-            if (!File.Exists(rutaArchivo))
+            try
             {
-                Console.WriteLine("El archivo no se encuentra en la ruta especificada.");
-                return;
+                // Obtener la ruta del directorio del ejecutable
+                string rutaEjecutable = AppDomain.CurrentDomain.BaseDirectory;
+
+                // Construir la ruta completa al archivo plantilla.xlsx
+                string rutaArchivo = Path.Combine(rutaEjecutable, "plantilla.xls");
+
+                // Verificar si el archivo existe
+                if (!File.Exists(rutaArchivo))
+                {
+                    Console.WriteLine("El archivo no se encuentra en la ruta especificada.");
+                    return;
+                }
+
+                // Abrir el archivo Excel (Formato .xlsx)
+                using (FileStream file = new FileStream(rutaArchivo, FileMode.Open, FileAccess.Read))
+                {
+                    XSSFWorkbook workbook = new XSSFWorkbook(file);
+
+                    // Obtener las hojas de cálculo
+                    ISheet hoja = workbook.GetSheetAt(0);
+
+                    Console.WriteLine("ObtenerRegistros");
+
+                    Console.WriteLine("ProcesarFilas");
+                    List<string[]> datos = ProcesarFilas(hoja, ObtenerRegistros(hoja));
+
+                    // Fecha del reporte
+                    string date = hoja.GetRow(0).GetCell(5).ToString();
+                    string day = date.Substring(0, 2);
+                    string month = "12";//date.Substring(3, 3).ToUpper();
+                    string year = date.Substring(date.Length - 4);
+
+                    Console.WriteLine("Escribiendo encabezados");
+
+                    // Entidad con los datos del encabezado
+                    HeaderData d = new HeaderData();
+
+                    //REGISTRO TIPO 1
+                    //la secuencia es 1;debe tener 48 caracteres
+                    string tipo1 = $"{1.PadZerosLeft()}{1}{d.EntityType}{d.EntityCode}{day}{month}{year}{datos.Count().PadZerosLeft()}{d.KeyWord}{d.Area}{d.ReportType}";
+                    if (tipo1.Length != 48) throw new Exception("Registro tipo 1 invalido");
+
+                    // REGISTRO TIPO 3
+                    // la secuencia es 2; debe tener 43 caracteres
+                    string evaluationType = "0";
+                    int fideicomiso = 0;
+                    string tipo3 = $"{2.PadZerosLeft()}{3}{evaluationType}{fideicomiso.PadZerosLeft(17)}0000000000000000";
+                    if (tipo3.Length != 43) throw new Exception("Registro tipo 3 invalido");
+
+                    // REGISTRO TIPO 4
+                    //la secuencia es 3; debe tener 31 caracteres
+                    string tipo4 = $"{3.PadZerosLeft()}{4}0000000000000000000002";
+                    if (tipo4.Length != 31) throw new Exception("Registro tipo 4 invalido");
+
+                    // REGISTRO TIPO 6
+                    //la secuencia va de ultimo; debe tener 31 caracteres
+                    int lastSequence = datos.Count() + 3;
+                    string tipo6 = $"{lastSequence.PadZerosLeft()}{6}";
+                    if (tipo6.Length != 9) throw new Exception("Registro tipo 6 invalido");
+
+                    // tipo1, tipo3, tipo 4 van al principio
+                    datos.Insert(0, new string[] { tipo1 });
+                    datos.Insert(1, new string[] { tipo3 });
+                    datos.Insert(2, new string[] { tipo4 });
+
+                    // Registro de cierre al final
+                    datos.Add(new string[] { tipo6 });
+
+                    Console.WriteLine("EscribirEnArchivoPlano");
+                    EscribirEnArchivoPlano(datos, month, year, rutaEjecutable);
+
+                    Console.WriteLine("Proceso completado.");
+                }
             }
-
-            // Abrir el archivo Excel (Formato .xlsx)
-            using (FileStream file = new FileStream(rutaArchivo, FileMode.Open, FileAccess.Read))
+            catch (Exception ex)
             {
-                XSSFWorkbook workbook = new XSSFWorkbook(file);
-
-                // Obtener las hojas de cálculo
-                ISheet hoja = workbook.GetSheetAt(0);
-
-                Console.WriteLine("ObtenerRegistros");
-
-                Console.WriteLine("ProcesarFilas");
-                List<string[]> datos = ProcesarFilas(hoja, ObtenerRegistros(hoja));
-
-                // Fecha del reporte
-                string date = hoja.GetRow(0).GetCell(5).ToString();
-                string day = date.Substring(0, 2);
-                string month = date.Substring(3, 3).ToUpper();
-                string year = date.Substring(date.Length - 4);
-
-                Console.WriteLine("Escribiendo encabezados");
-
-                // Entidad con los datos del encabezado
-                HeaderData d = new HeaderData();
-
-                //REGISTRO TIPO 1
-                //la secuencia es 1;debe tener 48 caracteres
-                string tipo1 = $"{1.PadZerosLeft()}{1}{d.entityType}{d.entityCode}{day}{month}{year}{datos.Count().PadZerosLeft()}{d.keyWord}{d.area}{d.reportType}";
-
-                // REGISTRO TIPO 3
-                // la secuencia es 2; debe tener 43 caracteres
-                string evaluationType = "0";
-                int fideicomiso = 0;
-                string tipo3 = $"{2.PadZerosLeft()}{3}{evaluationType}{fideicomiso.PadZerosLeft(2)}0000000000000000000000";
-
-                // REGISTRO TIPO 4
-                //la secuencia es 3; debe tener 31 caracteres
-                string tipo4 = $"{3.PadZerosLeft()}{4}000000000000000000000002";
-
-                // REGISTRO TIPO 6
-                //la secuencia va de ultimo; debe tener 31 caracteres
-                int lastSequence = datos.Count() + 3;
-                string tipo6 = $"{lastSequence.PadZerosLeft()}{6}";
-
-                // tipo1, tipo3, tipo 4 van al principio
-                datos.Insert(0, new string[] { tipo1 });
-                datos.Insert(1, new string[] { tipo3 });
-                datos.Insert(2, new string[] { tipo4 });
-
-                // Registro de cierre al final
-                datos.Add(new string[] { tipo6 });
-
-                Console.WriteLine("EscribirEnArchivoPlano");
-                EscribirEnArchivoPlano(datos, month, year, rutaEjecutable);
-
-                Console.WriteLine("Proceso completado.");
+                Console.WriteLine(ex.Message);
             }
         }
 

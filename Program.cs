@@ -75,7 +75,7 @@ namespace BuildF394
                     Console.WriteLine("ObtenerRegistros");
 
                     Console.WriteLine("ProcesarFilas");
-                    List<string[]> datos = ProcesarFilas(hoja, ObtenerRegistros(hoja));
+                    List<string[]> datos = ProcesarFilas(hoja, ContarRegistros(hoja));
 
                     // Fecha del reporte
                     string date = hoja.GetRow(0).GetCell(5).ToString();
@@ -161,27 +161,42 @@ namespace BuildF394
         }
 
         /// <summary>
-        ///
+        /// Crea registros tipo 5
         /// </summary>
         /// <param name="secuencia"></param>
-        /// <param name="columna"></param>
         /// <param name="fila"></param>
+        /// <param name="columna"></param>
         /// <param name="hoja"></param>
         /// <returns></returns>
-        private static string[] CrearFila(int secuencia, int columna, int fila, ISheet hoja)
+        private static string[] CrearFila(int secuencia, int fila, int columna, ISheet hoja)
         {
-            string nceros4 = columna < 10 ? "0" : "";
             string nceros6 = new string('0', 6 - fila.ToString().Length);
 
             // Almacenar todos los datos en un array de strings
             string[] result = new string[8];
+
+            //Secuencia 8
             result[0] = secuencia.PadZerosLeft();
+
+            //Tipo de registro 5
             result[1] = "5";
+
+            //Codigo de formato
             result[2] = "394";
-            result[3] = nceros4 + columna;
+
+            //Codigo de Columna
+            result[3] = columna.PadZerosLeft(2);
+
+            // Codigo de unidad de captura
             result[4] = "01";
+
+            // Codigo de la subcuenta
             result[5] = nceros6 + fila;
+
+            //Signo
             result[6] = "+";
+
+            //Valor longitud 17 o 50
             result[7] = ObtenerValorCelda(hoja, fila, columna);
 
             return result;
@@ -236,7 +251,7 @@ namespace BuildF394
                     {
                         counter++;
                         secuencia = 3 + counter;
-                        string[] filaDatos = CrearFila(secuencia, col, fila, hoja);
+                        string[] filaDatos = CrearFila(secuencia, fila, col, hoja);
                         result.Add(filaDatos);
                     }
                 }
@@ -245,10 +260,15 @@ namespace BuildF394
             return result;
         }
 
-        private static int ObtenerRegistros(ISheet sheet)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns></returns>
+        private static int ContarRegistros(ISheet sheet)
         {
             int j = 1;
-            while (sheet.GetRow(5 + j) != null && sheet.GetRow(5 + j).GetCell(0) != null &&
+            while (sheet.GetRow(5 + j) != null && sheet.GetRow(ROW_OFFSET + j).GetCell(0) != null &&
                    sheet.GetRow(5 + j).GetCell(0).CellType != CellType.Blank)
             {
                 j++;

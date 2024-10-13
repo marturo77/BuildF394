@@ -347,8 +347,14 @@ namespace BuildF394
                     if (sheet.IsNotEmpty(row, col))
                     {
                         // Obtiene un registro tipo 5 para la cuenta
-                        result.Add(GetRecord(sheet, secuencia, row, col));
-                        secuencia++;
+                        string[] record = GetRecord(sheet, secuencia, row, col);
+
+                        // Pruebas
+                        //if (!string.IsNullOrEmpty(record[7]))
+                        {
+                            result.Add(record);
+                            secuencia++;
+                        }
 
                         // Si es una columna de consolidacion va sumando
                         if (col.IsConsolidation())

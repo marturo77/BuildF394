@@ -15,6 +15,16 @@ namespace BuildF394
         public const int ROW_OFFSET = 6;
 
         /// <summary>
+        /// Codigo de formato de document
+        /// </summary>
+        public const string FORMAT_CODE = "394";
+
+        /// <summary>
+        ///
+        /// </summary>
+        public const string CAPTURE_CODE = "01";
+
+        /// <summary>
         /// Total de columnas en la pagina 1
         /// </summary>
         public const int TOTAL_COLUMNS = 84;
@@ -98,15 +108,15 @@ namespace BuildF394
                     // Entidad con los datos del encabezado
                     HeaderData headerData = new HeaderData();
 
-                    #region Registro Tipo 1
+                    #region Registro Tipo 1 - Registro de control y encabezado
 
                     //la secuencia es 1;debe tener 48 caracteres
                     string tipo1 = $"{1.PadZerosLeft()}{1}{headerData.EntityType}{headerData.EntityCode}{day}{month}{year}{datos.Count().PadZerosLeft()}{headerData.KeyWord}{headerData.Area}{headerData.ReportType}";
                     if (tipo1.Length != 48) throw new Exception("Registro tipo 1 invalido");
 
-                    #endregion Registro Tipo 1
+                    #endregion Registro Tipo 1 - Registro de control y encabezado
 
-                    #region RegistroTipo 2
+                    #region RegistroTipo 2 - Tipo de identificacion
 
                     // la secuencia es 2; debe tener 43 caracteres
                     string evaluationType = "0";
@@ -114,24 +124,24 @@ namespace BuildF394
                     string tipo3 = $"{2.PadZerosLeft()}{3}{evaluationType}{fideicomiso.PadZerosLeft(17)}0000000000000000";
                     if (tipo3.Length != 43) throw new Exception("Registro tipo 3 invalido");
 
-                    #endregion RegistroTipo 2
+                    #endregion RegistroTipo 2 - Tipo de identificacion
 
-                    #region Registro Tipo 4
+                    #region Registro Tipo 4 - Formatos
 
                     //la secuencia es 3; debe tener 31 caracteres
                     string tipo4 = $"{3.PadZerosLeft()}{4}0000000000000000000002";
                     if (tipo4.Length != 31) throw new Exception("Registro tipo 4 invalido");
 
-                    #endregion Registro Tipo 4
+                    #endregion Registro Tipo 4 - Formatos
 
-                    #region Registro tipo 6
+                    #region Registro tipo 6 - Cierre o fin de archivo
 
                     //la secuencia va de ultimo; debe tener 31 caracteres
                     int lastSequence = datos.Count() + 3;
                     string tipo6 = $"{lastSequence.PadZerosLeft()}{6}";
                     if (tipo6.Length != 9) throw new Exception("Registro tipo 6 invalido");
 
-                    #endregion Registro tipo 6
+                    #endregion Registro tipo 6 - Cierre o fin de archivo
 
                     #region Colocar registros al principio y el tipo6 al final
 
@@ -209,9 +219,9 @@ namespace BuildF394
             record[1] = "5";
 
             //Codigo de formato
-            record[2] = "394";
+            record[2] = Program.FORMAT_CODE;
 
-            //Codigo de Columna
+            //Codigo de Columna/es la columna
             record[3] = (col + 1).PadZerosLeft(2);
 
             //Codigo de unidad de captura
@@ -224,7 +234,7 @@ namespace BuildF394
             record[6] = "+";
 
             //Valor longitud 17
-            record[7] = total.PadZerosLeft(17);
+            record[7] = ((int)total).PadZerosLeft(17);
 
             return record;
         }
@@ -249,21 +259,20 @@ namespace BuildF394
             record[1] = "5";
 
             //Codigo de formato
-            record[2] = "394";
+            record[2] = Program.FORMAT_CODE;
 
-            //Codigo de Columna
+            //Codigo de Columna/Cuenta
             record[3] = (col + 1).PadZerosLeft(2);
 
             //Codigo de unidad de captura
-            record[4] = "01";
+            record[4] = Program.CAPTURE_CODE;
 
-            //Codigo de la subcuenta
+            //Codigo de la subcuenta la fila
             record[5] = (row + 1).PadZerosLeft(6);
 
             //Signo
             record[6] = "+";
 
-            //Valor longitud 17
             record[7] = GetValue(sheet, row, col);
 
             return record;
@@ -284,8 +293,7 @@ namespace BuildF394
             {
                 return cell.ToString().PadLeft(17, '0');
             }
-            else
-                if (col.IsInsuranceCode())
+            else if (col.IsInsuranceCode())
             {
                 return cell.NumericCellValue.PadZerosLeft(17);
             }
@@ -340,6 +348,7 @@ namespace BuildF394
                     {
                         // Obtiene un registro tipo 5 para la cuenta
                         result.Add(GetRecord(sheet, secuencia, row, col));
+                        secuencia++;
 
                         // Si es una columna de consolidacion va sumando
                         if (col.IsConsolidation())
@@ -348,17 +357,17 @@ namespace BuildF394
                             consolidate += cell.NumericCellValue;
                         }
                     }
-
-                    secuencia++;
                 }
 
                 // Es el final de la fila y hay que consolidar
                 if (consolidate > 0)
                 {
-                    Console.WriteLine($"Columna consolidada {col}={consolidate.PadZerosLeft(17)}");
+                    Console.WriteLine($"{secuencia.PadZerosLeft()} Columna consolidada {col}={consolidate.PadZerosLeft(17)}");
 
                     // Obtiene un registro tipo 5 para la cuenta
                     result.Add(GetConsolidationRecord(secuencia, col, consolidate));
+
+                    secuencia++;
                 }
             }
 

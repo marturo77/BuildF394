@@ -23,21 +23,21 @@ namespace BuildF394
         /// </summary>
         /// <param name="columna"></param>
         /// <returns></returns>
-        public static bool EsTexto(int columna) => new[] { 8, 10, 21, 47, 55, 63, 66, 76 }.Contains(columna);
+        public static bool EsTexto(this int columna) => new[] { 8, 10, 21, 47, 55, 63, 66, 76 }.Contains(columna);
 
         /// <summary>
         ///
         /// </summary>
         /// <param name="columna"></param>
         /// <returns></returns>
-        public static bool EsFecha(int columna) => new[] { 9, 11, 20, 46, 54, 62, 83 }.Contains(columna);
+        public static bool EsFecha(this int columna) => new[] { 9, 11, 20, 46, 54, 62, 83 }.Contains(columna);
 
         /// <summary>
         ///
         /// </summary>
         /// <param name="columna"></param>
         /// <returns></returns>
-        public static bool EsNumero(int columna) => new[] { 4, 6, 7, 30, 32, 37, 79, 80, 81, 82 }.Contains(columna);
+        public static bool EsNumero(this int columna) => new[] { 4, 6, 7, 30, 32, 37, 79, 80, 81, 82 }.Contains(columna);
 
         /// <summary>
         /// Función para verificar si la celda no está vacía
